@@ -1,0 +1,18 @@
+{{- range $service := .Values.services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "helm-template.fullname" $ }}-{{ $service.name }}
+  namespace: {{ include "helm-template.namespace" $ }}
+  labels:
+    {{- include "helm-template.selectorLabels" $ | nindent 4 }}
+spec:
+  type: {{ $service.type }}
+  ports:
+    - port: {{ $service.port }}
+      targetPort: {{ $service.targetport }}
+      protocol: TCP
+  selector:
+    {{- include "helm-template.selectorLabels" $ | nindent 4 }}
+{{- end }}
