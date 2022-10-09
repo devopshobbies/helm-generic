@@ -2,7 +2,7 @@
 Expand the name of the chart.
 */}}
 {{- define "helm-template.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- default .Chart.Name .Values.name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/* 
@@ -14,7 +14,7 @@ If release name contains chart name it will be used as a full name.
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- $name := default .Chart.Name .Values.name }}
 {{- if contains $name .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -42,20 +42,8 @@ Common labels
 helm.sh/chart: {{ include "helm-template.chart" . }}
 {{ include "helm-template.selectorLabels" . }}
 
-{{- range $affinity :=  .Values.Affinity -}}
-{{- range $value :=   $affinity.values -}}
-{{- if and ($affinity.key) ($value) }}
-{{  $affinity.key }}: {{ $value  }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{- range $antiaffinity :=  .Values.AntiAffinity -}}
-{{- range $value :=   $antiaffinity.values -}}
-{{- if and ($antiaffinity.key) ($value) }}
-{{  $antiaffinity.key }}: {{ $value  }}
-{{- end }}
-{{- end }}
+{{- range $akey , $avalue :=  .Values.affinitylable }}
+{{  $akey }}: {{ $avalue }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
@@ -63,88 +51,54 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "helm-template.selectorLabels" -}}
-app: {{ include "helm-template.fullname" . }}
-{{- end }}
 
+{{- define "helm-template.selectorLabels" -}}
+app: {{ include "helm-template.name" . }}
+{{- end }}
 
 {{/*
-affinity
+ENV Secret
 */}}
 
-{{- define "helm-template.affinity" -}}
-{{- range $typelist := list "nodeAffinity" "nodeAntiAffinity" "podAntiAffinity" "podAffinity" }}
-{{- $afflag := list 1 -}}
-{{- range $rulelist := list "required" "preferred" }}
-{{- range $Affinities := .Values.Affinity -}}
-{{- if  eq $typelist $Affinities.type -}}
-{{- if not (has $typelist $afflag ) -}}
-{{ $typelist | nindent 0 }}:
-{{- $afflag = append $afflag $Affinities.type  -}}
-{{- end -}}
-{{- if eq $rulelist $Affinities.rule -}}
-{{- if and (not (has $Affinities.rule  $afflag) (eq $Affinities.rule "required") )  -}}
-  requiredDuringSchedulingIgnoredDuringExecution:
-{{- if has "node" $Affinities.type -}}
-    nodeSelectorTerms:
-    - matchExpressions: 
-{{- else if has "pod" $Affinities.type -}}
-  - labelSelector:
-      matchExpressions:
-{{- end -}}
-{{- $afflag = append $afflag  $Affinities.rule  -}}
+{{- define "helm-template.envsecrets" -}}
+{{- range $key, $val := .Values.secretdata }}
+- name: {{  $key | replace "." "_" | upper }}
+  valueFrom:
+    configMapKeyRef:
+      key: {{ $key }}
+      name: {{ include "helm-template.name" $ }}-secrets
 {{- end }}
-{{- if eq $Affinities.rule "required" -}}
-      - key: {{ $Affinities.key }}
-        operator: {{ $Affinities.operator }}
-        values:
-        {{- toYaml $Affinities.values | nindent 8 }}
 {{- end }}
-{{- if and (not (has $Affinities.rule  $afflag) (eq $Affinities.rule "preferred") )  -}}
-  preferredDuringSchedulingIgnoredDuringExecution:
-{{- $afflag = append $afflag  $Affinities.rule  -}}
-{{- end }}
-{{- if eq $Affinities.rule "preferred" -}}
-{{- if has "node" $Affinities.type -}}
-  - weight: {{ $Affinities.weight | default "100"  }}
-      preference:
-        matchExpressions:
-        - key: {{ $Affinities.key }}
-          operator: {{ $Affinities.operator }}
-          values:
-          {{- toYaml $Affinities.values | nindent 8 }} 
-{{- else if has "pod" $Affinities.type -}}
-  - weight: {{ $Affinities.weight | default "100"  }}
-    podAffinityTerm:
-      labelSelector:
-        matchExpressions:
-        - key: {{ $Affinities.key }}
-          operator: {{ $Affinities.operator }}
-          values:
-          {{- toYaml $Affinities.values | nindent 10 }}
-{{- end -}}
-{{- end -}}
 
-{{- end -}}
-{{- end -}}
-
-{{- end }}
-{{if has "pod" $typelist -}}
-      topologyKey: "kubernetes.io/hostname"
-{{- end -}}
-
+{{/*
+Secret Data
+*/}}
+{{- define "helm-template.secretdata" -}}
+{{- range $key, $val := .Values.secretdata }}
+{{ $key | indent 2}}: {{ $val | quote }}
 {{- end }}
 {{- end }}
-{{- end -}}
 
+{{/*
+Volume Mounts
+*/}}
 
+{{- define "helm-template.volumemount" -}}
+{{- if .Values.volumes }}
+volumeMounts:
+{{- end }}
+{{- range $vol := .Values.volumes }}
+- mountPath: /opt/{{ $vol.name }}
+  name: {{ $vol.name }}
+{{- end }}
+{{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
 {{- define "helm-template.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "helm-template.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "helm-template.name" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

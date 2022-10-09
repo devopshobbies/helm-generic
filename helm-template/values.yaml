@@ -1,77 +1,124 @@
-# Default values for helm-template.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# Secret Data Variables for
+secretdata:
+  amq.datasource.username: XXXXXX
+  amq.datasource.password: YYYYYY
+  minio.access.key: ZZZZZZ
+  minio.secret.key: AAAAAA
+  redis.datasource.password: BBBBBBBB
 
+name: "MyApp"
+namespace: "MyNS"
 replicaCount: 1
 
-image:
-  repository: nginx
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+imagePullSecrets:
+- name: regcred
 
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
-namespace: ""
- 
- 
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: ""
+restartPolicy: Always
+
+
+affinitylable:
+  pan: xk
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - general
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: pan
+            operator: In
+            values:
+            - xk
+        topologyKey: kubernetes.io/hostname
+
 
 podAnnotations: {}
 
-podSecurityContext: {}
+podSecurityContext: 
   # fsGroup: 2000
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
 
-service:
-  type: ClusterIP
-  port: 8088
+containers:
+  - image: nginx
+    repository: hub.my.org
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: ""
+    args:
+      - -c
+      - java $JAVA_OPTS -Duser.timezone='Asia/Tehran'  -Dlog4j2.formatMsgNoLookups=true   -jar app.jar
+    command: 
+      - /bin/sh
+    workingDir: /opt/
+    ports:
+      - name: http
+        port: 8080
+        service_enable: true
+        service_type: 
+        service_port: 
+    env:
+      configMapKeyRef:
+        - key: network.version
+          ConfigMapName: hooman-config
+        - key: network.deployment
+          ConfigMapName: hooman-config
+      JAVA_OPTS: -Drouting.local-ip=127.0.0.1 -Drouting.version=$(VERSION)
+    envFrom:
+      - ConfigMapName: configmapname
+    healthcheck: 
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /monitor/health
+          port: 8080
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 30
+        timeoutSeconds: 7
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /monitor/health
+          port: 8080
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 7
+    resources:
+      limits:
+        memory: 4Gi
+        cpu: "4"
+      requests:
+        cpu: "2"
+        memory: 2Gi
 
-ingress:
-  enabled: false
-  className: ""
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
-  hosts:
-    - host: chart-example.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
 
-resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+    securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000  
+volumes: 
+  - name: vol1
+    emptyDir: {}
+  - name: vol2
+    emptyDir: 
+      medium: Memory
+
 
 autoscaling:
-  enabled: false
+  enabled: true
   minReplicas: 1
   maxReplicas: 100
   targetCPUUtilizationPercentage: 80
@@ -81,4 +128,24 @@ nodeSelector: {}
 
 tolerations: []
 
-affinity: {}
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "MyApp"
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+      - path: /
+        backend:
+          serviceName: chart-example.local
+          servicePort: 80

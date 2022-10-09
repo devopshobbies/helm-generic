@@ -1,18 +1,22 @@
-{{- range $service := .Values.services }}
+{{- range $containers := .Values.containers }}
+{{- range $service := $containers.ports }}
+{{- if  $service.service_enable }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "helm-template.fullname" $ }}-{{ $service.name }}
+  name: {{ include "helm-template.name" $ }}-{{ $service.name }}
   namespace: {{ include "helm-template.namespace" $ }}
   labels:
     {{- include "helm-template.selectorLabels" $ | nindent 4 }}
 spec:
-  type: {{ $service.type }}
+  type: {{ $service.service_type | default "ClusterIP" }}
   ports:
-    - port: {{ $service.port }}
-      targetPort: {{ $service.targetport }}
+    - port: {{ $service.service_port | default "8080" }}
+      targetPort: {{ $service.port | default "8080" }}
       protocol: TCP
   selector:
     {{- include "helm-template.selectorLabels" $ | nindent 4 }}
+{{- end }}
+{{- end }}
 {{- end }}

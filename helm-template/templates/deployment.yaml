@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "helm-template.fullname" . }}
+  name: {{ include "helm-template.name" . }}
   namespace: {{ include "helm-template.namespace" $ }}
 
 spec:
@@ -11,7 +11,7 @@ spec:
   selector: 
     matchLabels:
       {{- include "helm-template.selectorLabels" . | nindent 6 }}
-      
+    
     strategy:
       rollingUpdate:
         maxSurge: 1
@@ -30,39 +30,87 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if (.Values.Affinity) }}
-      affinity:
-        {{- include "helm-template.affinity" . | nindent 8 -}}
-      {{- end }}
-      serviceAccountName: {{ include "helm-template.serviceAccountName" . }}
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      containers:
-        - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - name: http
-              containerPort: 80
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      restartPolicy: "{{- toYaml .Values.restartPolicy }}"
       {{- with .Values.affinity }}
       affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "helm-template.serviceAccountName" . }}
+      {{- if .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- end }}
+{{- range $container :=  .Values.containers }}
+      containers:
+      - name: {{ $container.image }}
+      {{- if $container.securityContext -}}
+        securityContext:
+          {{- toYaml $container.securityContext | nindent 10 }}
+      {{- end }}
+        image: "{{ $container.repository }}/{{ $container.image }}:{{ $container.tag | default "latest" }}"
+      {{- with $container.args }}
+        args:
+        {{- toYaml .  |nindent 8 }}
+      {{- end }}
+      {{- with $container.command }}
+        command:
+        {{- toYaml .  |nindent 8 }}
+      {{- end }}
+        imagePullPolicy: {{ $container.pullPolicy }}
+        ports:
+        {{- range $port := $container.ports }}
+        - name: {{ toYaml $port.name | default "http" }}
+          containerPort: {{ toYaml $port.port | default "8080" }}
+          protocol: TCP
+        {{- end }}
+        {{- if $container.healthcheck -}}
+          {{- toYaml $container.healthcheck | nindent 8 }}
+        {{- end }}
+          {{- toYaml $container.resources | nindent 10 }}
+        envFrom:
+        {{- range $envFrom := $container.envFrom }}
+        - configMapRef:
+            name: {{ toYaml $envFrom.ConfigMapName }}
+        {{- end }}
+        env:
+        {{- range $configkey := $container.env.configMapKeyRef }}
+        - name: {{ toYaml $configkey.key | replace "." "_" | upper }}
+          valueFrom:
+            configMapKeyRef:
+              key: {{ toYaml $configkey.key }}
+              name: {{ toYaml $configkey.ConfigMapName }}
+        {{- end }}
+        {{- include "helm-template.envsecrets" $ | nindent 8 }}
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        {{- range $key, $val := $container.env }}
+        {{- if  ne $key "configMapKeyRef" }}
+        - name: {{ toYaml $key }}
+          value: {{ toYaml $val }}
+        {{- end }}
+        {{- end }}
+        {{- if $.Values.volumes }}
+        volumeMounts:
+        {{- end }}
+        {{- range $vol := $.Values.volumes }}
+        - mountPath: {{ $container.workingDir | default "/opt" | trimSuffix "/" }}/{{ $vol.name }}
+          name: {{ $vol.name }}
+        {{- end }}
+{{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+      {{- toYaml . | nindent 6  }}
+      {{- end }}  
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.tolerations }}
