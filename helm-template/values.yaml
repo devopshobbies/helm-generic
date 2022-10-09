@@ -57,7 +57,7 @@ containers:
       - -c
       - java $JAVA_OPTS -Duser.timezone='Asia/Tehran'  -Dlog4j2.formatMsgNoLookups=true   -jar app.jar
     command: 
-      - /bin/sh
+      - /bin/bash
     workingDir: /opt/
     ports:
       - name: http
@@ -93,13 +93,13 @@ containers:
         initialDelaySeconds: 10
         periodSeconds: 10
         timeoutSeconds: 7
-    resources:
-      limits:
-        memory: 4Gi
-        cpu: "4"
-      requests:
-        cpu: "2"
-        memory: 2Gi
+    resources: {}
+      # limits:
+      #   memory: 4Gi
+      #   cpu: "4"
+      # requests:
+      #   cpu: "2"
+      #   memory: 2Gi
 
 
     securityContext: {}

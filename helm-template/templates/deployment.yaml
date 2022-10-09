@@ -52,11 +52,11 @@ spec:
         args:
         {{- toYaml .  |nindent 8 }}
       {{- end }}
-      {{- with $container.command }}
-        command:
-        {{- toYaml .  |nindent 8 }}
-      {{- end }}
-        imagePullPolicy: {{ $container.pullPolicy }}
+
+        command: 
+        {{-  dig "command" "- /bin/sh" $container   | toYaml | nindent 8 }}
+        workingDir: {{ $container.workingDir | default "/opt" }}
+        imagePullPolicy: {{ $container.pullPolicy | default "IfNotPresent" }}
         ports:
         {{- range $port := $container.ports }}
         - name: {{ toYaml $port.name | default "http" }}
@@ -66,8 +66,16 @@ spec:
         {{- if $container.healthcheck -}}
           {{- toYaml $container.healthcheck | nindent 8 }}
         {{- end }}
-          {{- toYaml $container.resources | nindent 10 }}
+        resources:
+          limits:
+            memory: {{  dig "resources" "limits" "memory" "100Mi" $container | quote }}
+            cpu: {{ dig "resources" "limits" "cpu" "1" $container | quote  }}
+          requests:
+            cpu: {{ dig "resources" "requests" "cpu" "1" $container | quote  }}
+            memory: {{ dig "resources" "requests" "memory" "200Mi" $container | quote  }}
+        {{- if $container.envFrom }}    
         envFrom:
+        {{- end }}
         {{- range $envFrom := $container.envFrom }}
         - configMapRef:
             name: {{ toYaml $envFrom.ConfigMapName }}
