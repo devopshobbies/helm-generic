@@ -41,10 +41,17 @@ Common labels
 {{- define "helm-template.labels" -}}
 helm.sh/chart: {{ include "helm-template.chart" . }}
 {{ include "helm-template.selectorLabels" . }}
-
-{{- range $akey , $avalue :=  .Values.affinitylable }}
-{{  $akey }}: {{ $avalue }}
+{{- $labellist := list  -}}
+{{- range $key  :=  .Values.Affinity }}
+{{- range $value  :=  $key.values }}
+{{- $label := cat  $key.key ":" $value  -}}
+{{- if not (has $label  $labellist) }}
+{{ $key.key }}: {{ $value }}
 {{- end }}
+{{- $labellist = append $labellist $label  -}}
+{{- end }}
+{{- end }}
+
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 

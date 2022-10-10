@@ -38,20 +38,20 @@ Affinity:
   - type: nodeAffinity
     rule: required
     key: app
-    operator: eq
+    operator: NotIn
     values:
       - ali
   - type: podAntiAffinity
     rule: preferred
     key: pan
-    operator: ne
+    operator: NotIn
     values:
       - we
     weight: 100
   - type: podAffinity
     rule: required
     key: pan
-    operator: ne
+    operator: In
     values:
       - we
     weight: 100
