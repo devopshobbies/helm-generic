@@ -31,9 +31,9 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       restartPolicy: "{{- toYaml .Values.restartPolicy }}"
-      {{- with .Values.affinity }}
+      {{- if .Values.Affinity }}
       affinity:
-        {{- toYaml . | nindent 8 }}
+      {{- include "helm-template.affinity" . | nindent 8  -}}
       {{- end }}
       serviceAccountName: {{ include "helm-template.serviceAccountName" . }}
       {{- if .Values.podSecurityContext }}

@@ -19,26 +19,42 @@ restartPolicy: Always
 affinitylable:
   pan: xk
 
-affinity:
-  nodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key: app
-          operator: In
-          values:
-          - general
-  podAntiAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-    - weight: 100
-      podAffinityTerm:
-        labelSelector:
-          matchExpressions:
-          - key: pan
-            operator: In
-            values:
-            - xk
-        topologyKey: kubernetes.io/hostname
+Affinity:
+  - type: nodeAntiAffinity
+    rule: required
+    key: app
+    operator: In
+    values:
+      - general
+      - nn
+
+  - type: podAntiAffinity
+    rule: preferred
+    key: pan
+    operator: In
+    values:
+      - man
+    weight: 100
+  - type: nodeAffinity
+    rule: required
+    key: app
+    operator: eq
+    values:
+      - ali
+  - type: podAntiAffinity
+    rule: preferred
+    key: pan
+    operator: ne
+    values:
+      - we
+    weight: 100
+  - type: podAffinity
+    rule: required
+    key: pan
+    operator: ne
+    values:
+      - we
+    weight: 100
 
 
 podAnnotations: {}

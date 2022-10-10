@@ -57,6 +57,73 @@ app: {{ include "helm-template.name" . }}
 {{- end }}
 
 {{/*
+Pars Affinity
+*/}}
+{{- define "helm-template.affinity" -}}
+{{- range $typelist := (list "nodeAffinity" "nodeAntiAffinity" "podAntiAffinity" "podAffinity") -}}
+{{- $afflag := list 1 -}}
+{{- range $rulelist := (list "required" "preferred") -}}
+{{- range $Affinities := $.Values.Affinity -}}
+{{- if  eq $typelist $Affinities.type -}}
+{{- if not (has $typelist $afflag ) -}}
+{{- $typelist | nindent 0 -}}:
+{{- $afflag = append $afflag $Affinities.type  -}}
+{{- end -}}
+{{- if eq $rulelist $Affinities.rule -}}
+{{- if and (not (has $Affinities.rule  $afflag)) (eq $Affinities.rule "required")   }}
+  requiredDuringSchedulingIgnoredDuringExecution:
+  {{- if contains "node" $Affinities.type }}
+    nodeSelectorTerms:
+      - matchExpressions: 
+  {{- else if contains "pod" $Affinities.type }}
+    - labelSelector:
+        matchExpressions:
+ {{- end }}
+ {{- $afflag = append $afflag  $Affinities.rule  -}}
+ {{- end }}
+ {{- if eq $Affinities.rule "required" }}
+        - key: {{ $Affinities.key }}
+          operator: {{ $Affinities.operator }}
+          values:
+          {{- toYaml $Affinities.values | nindent 10 }}
+{{- end }}
+{{- if and (not (has $Affinities.rule  $afflag)) (eq $Affinities.rule "preferred")   }}
+  preferredDuringSchedulingIgnoredDuringExecution:
+{{- $afflag = append $afflag  $Affinities.rule  -}}
+{{- end }}
+{{- if eq $Affinities.rule "preferred" }}
+{{- if contains "node" $Affinities.type }}
+  - weight: {{ $Affinities.weight | default "100"  }}
+    preference:
+      matchExpressions:
+      - key: {{ $Affinities.key }}
+        operator: {{ $Affinities.operator }}
+        values:
+        {{- toYaml $Affinities.values | nindent 8 }} 
+{{- else if contains "pod" $Affinities.type }}
+  - weight: {{ $Affinities.weight | default "100"  }}
+    podAffinityTerm:
+      labelSelector:
+        matchExpressions:
+        - key: {{ $Affinities.key }}
+          operator: {{ $Affinities.operator }}
+          values:
+          {{- toYaml $Affinities.values | nindent 12 }}
+{{- end }}
+{{- end }}
+    {{- if and  (contains "pod" $Affinities.type) (eq $Affinities.rule "preferred") }}
+      topologyKey: "kubernetes.io/hostname"
+    {{- $afflag = append $afflag  "topology"  -}}
+    {{- end }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+
+{{/*
 ENV Secret
 */}}
 
