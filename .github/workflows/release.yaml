@@ -1,0 +1,10 @@
+name: "Generic chart SemVer release"
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: checkout@v3
