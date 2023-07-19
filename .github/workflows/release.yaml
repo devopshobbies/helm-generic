@@ -2,7 +2,7 @@ name: "Generic chart SemVer release"
 
 on:
   push:
-    branches: ["main", "feat/auto-release"]
+    branches: ["main"]
 
 jobs:
   test:
@@ -83,5 +83,7 @@ jobs:
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.4.0
+        with:
+          charts_dir: .
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
