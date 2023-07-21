@@ -9,9 +9,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Tag
-        uses: K-Phoen/semver-release-action@master
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
-          release_branch: main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Database Version
+        id: db-version
+        uses: paulhatch/semantic-version@v5.0.2
+        with:
+          change_path: "."
+          namespace: ""
