@@ -1,0 +1,164 @@
+# Secret Data Variables for
+secretdata:
+  amq.datasource.username: XXXXXX
+  amq.datasource.password: YYYYYY
+  minio.access.key: ZZZZZZ
+  minio.secret.key: AAAAAA
+  redis.datasource.password: BBBBBBBB
+
+name: "MyApp"
+namespace: "MyNS"
+replicaCount: 1
+
+imagePullSecrets:
+  - name: regcred
+
+restartPolicy: Always
+
+affinitylable:
+  pan: xk
+
+Affinity:
+  - type: nodeAntiAffinity
+    rule: required
+    key: app
+    operator: In
+    values:
+      - general
+      - nn
+
+  - type: podAntiAffinity
+    rule: preferred
+    key: pan
+    operator: In
+    values:
+      - man
+    weight: 100
+  - type: nodeAffinity
+    rule: required
+    key: app
+    operator: NotIn
+    values:
+      - ali
+  - type: podAntiAffinity
+    rule: preferred
+    key: pan
+    operator: NotIn
+    values:
+      - we
+    weight: 100
+  - type: podAffinity
+    rule: required
+    key: pan
+    operator: In
+    values:
+      - we
+    weight: 100
+
+podAnnotations: {}
+
+podSecurityContext:
+  # fsGroup: 2000
+
+containers:
+  - image: nginx
+    repository: hub.my.org
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: ""
+    args:
+      - -c
+      - java $JAVA_OPTS -Duser.timezone='Asia/Tehran'  -Dlog4j2.formatMsgNoLookups=true   -jar app.jar
+    command:
+      - /bin/bash
+    workingDir: /opt/
+    ports:
+      - name: http
+        port: 8080
+        service_enable: true
+        service_type:
+        service_port:
+    env:
+      configMapKeyRef:
+        - key: network.version
+          ConfigMapName: hooman-config
+        - key: network.deployment
+          ConfigMapName: hooman-config
+      JAVA_OPTS: -Drouting.local-ip=127.0.0.1 -Drouting.version=$(VERSION)
+    envFrom:
+      - ConfigMapName: configmapname
+    healthcheck:
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /monitor/health
+          port: 8080
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 30
+        timeoutSeconds: 7
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /monitor/health
+          port: 8080
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 7
+    resources:
+      {}
+      # limits:
+      #   memory: 4Gi
+      #   cpu: "4"
+      # requests:
+      #   cpu: "2"
+      #   memory: 2Gi
+
+    securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+volumes:
+  - name: vol1
+    emptyDir: {}
+  - name: vol2
+    emptyDir:
+      medium: Memory
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "MyApp"
+
+ingress:
+  enabled: false
+  annotations:
+    {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          backend:
+            serviceName: chart-example.local
+            servicePort: 80
