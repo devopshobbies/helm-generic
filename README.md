@@ -1,9 +1,8 @@
-# One chart to rule them all.
+# Devopshobbies helm generic chart
 
-This was one funny note I found. It is describing the goal of what is a generic helm chart in a fun manner.
+![DevopsHobbies helm generic chart](.github/assets/helm-generic-chart.png)
+This chart is created to be used inside devopshobbies & kaiser-io devops operations.
 
-## how to use this:
+## How it works:
 
-```
-# Needs to be completed.
-```
+The use-case is pretty simple and you can start using this by fetching the chart. Also there is one values.example.yaml defined for you witch you can check and have a look to find out how to set the variables.
