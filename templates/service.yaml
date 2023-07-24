@@ -1,22 +1,41 @@
-{{- range $containers := .Values.containers }}
-{{- range $service := $containers.ports }}
-{{- if  $service.service_enable }}
----
+{{- if (.Values.service).enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "helm-template.name" $ }}-{{ $service.name }}
-  namespace: {{ include "helm-template.namespace" $ }}
+  name: {{ template "application.name" . }}
+  namespace: {{ template "application.namespace" $ }}
   labels:
-    {{- include "helm-template.selectorLabels" $ | nindent 4 }}
+  {{- include "application.labels" . | nindent 4 }}
+{{- if .Values.service.additionalLabels }}
+{{ toYaml .Values.service.additionalLabels | indent 4 }}
+{{- end }}
+{{- if .Values.service.annotations }}
+  annotations:
+{{ include "application.tplvalues.render" ( dict "value" .Values.service.annotations  "context" $ ) | indent 4 }}
+{{- end }}
 spec:
-  type: {{ $service.service_type | default "ClusterIP" }}
-  ports:
-    - port: {{ $service.service_port | default "8080" }}
-      targetPort: {{ $service.port | default "8080" }}
-      protocol: TCP
+{{- if .Values.service.type }}  
+  type: "{{ .Values.service.type }}"
+{{- end }}
+{{- with .Values.service.clusterIP }}
+  clusterIP: {{ . }}
+{{- end }}
   selector:
-    {{- include "helm-template.selectorLabels" $ | nindent 4 }}
+{{ include "application.selectorLabels" . | indent 4 }}
+{{- if .Values.deployment.podLabels }}
+{{ toYaml .Values.deployment.podLabels | indent 4 }}
 {{- end }}
-{{- end }}
+  ports:
+  {{- if .Values.deployment.openshiftOAuthProxy.enabled }}
+  - name: proxy
+    port: 443
+    protocol: TCP
+    {{- if .Values.deployment.openshiftOAuthProxy.disableTLSArg }}
+    targetPort: 8081
+    {{- else }}
+    targetPort: 8443
+    {{- end }}
+  {{- else }}
+{{ toYaml .Values.service.ports | indent 4 }}
+  {{- end }}
 {{- end }}

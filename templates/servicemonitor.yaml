@@ -1,0 +1,27 @@
+{{- if and (.Values.serviceMonitor).enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+apiVersion: "monitoring.coreos.com/v1"
+kind: ServiceMonitor
+metadata:
+  name: {{ template "application.name" . }}-svc-monitor
+  namespace: {{ include "application.namespace" . }}
+  labels:
+  {{- include "application.labels" . | nindent 4 }}
+{{- if .Values.serviceMonitor.additionalLabels }}
+{{ toYaml .Values.serviceMonitor.additionalLabels | indent 4 }}
+{{- end }}
+{{- if or .Values.serviceMonitor.annotations .Values.forecastle.enabled }}
+  annotations:
+{{- end }}
+{{- if or .Values.serviceMonitor.annotations }}
+{{ toYaml .Values.serviceMonitor.annotations | indent 4 }}
+{{- end }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "application.name" . }}
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  endpoints:
+{{ toYaml .Values.serviceMonitor.endpoints | indent 4 }}
+{{- end }}

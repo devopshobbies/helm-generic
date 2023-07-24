@@ -1,167 +1,871 @@
-# Secret Data Variables for
-secretdata:
-  amq.datasource.username: XXXXXX
-  amq.datasource.password: YYYYYY
-  minio.access.key: ZZZZZZ
-  minio.secret.key: AAAAAA
-  redis.datasource.password: BBBBBBBB
+# -- Same as nameOverride but for the namespace.
+namespaceOverride: ""
 
-name: "MyApp"
-namespace: "MyNS"
-replicaCount: 1
+# -- Same as nameOverride but for the component.
+componentOverride: ""
 
-imagePullSecrets:
-- name: regcred
+# -- Same as nameOverride but for the partOf.
+partOfOverride: ""
 
-restartPolicy: Always
+##########################################################
+# Name of the application.
+##########################################################
+applicationName: "application"
 
+##########################################################
+# Global labels
+# These labels will be added on all resources,
+# and you can add additional labels from below
+# on individual resource
+##########################################################
 
-affinitylable:
-  pan: xk
+cronJob:
+  enabled: false
+  jobs:
+    # db-migration:
+    #   schedule: "* * * 8 *"
+    #   env:
+    #     KEY:
+    #       value: VALUE
+    #   image:
+    #     repository: docker.io/nginx
+    #     tag: v1.0.0
+    #     digest: '' # if set to a non empty value, digest takes precedence on the tag
+    #     imagePullPolicy: IfNotPresent
+    #   command: ["/bin/bash"]
+    #   args: ["-c","sleep 5000"]
+    #   resources:
+    #     requests:
+    #         memory: 5Gi
+    #         cpu: 1
 
-Affinity:
-  - type: nodeAntiAffinity
-    rule: required
-    key: app
-    operator: In
-    values:
-      - general
-      - nn
-
-  - type: podAntiAffinity
-    rule: preferred
-    key: pan
-    operator: In
-    values:
-      - man
-    weight: 100
-  - type: nodeAffinity
-    rule: required
-    key: app
-    operator: NotIn
-    values:
-      - ali
-  - type: podAntiAffinity
-    rule: preferred
-    key: pan
-    operator: NotIn
-    values:
-      - we
-    weight: 100
-  - type: podAffinity
-    rule: required
-    key: pan
-    operator: In
-    values:
-      - we
-    weight: 100
-
-
-podAnnotations: {}
-
-podSecurityContext: 
-  # fsGroup: 2000
-
-
-containers:
-  - image: nginx
-    repository: hub.my.org
-    pullPolicy: IfNotPresent
-    # Overrides the image tag whose default is the chart appVersion.
-    tag: ""
-    args:
-      - -c
-      - java $JAVA_OPTS -Duser.timezone='Asia/Tehran'  -Dlog4j2.formatMsgNoLookups=true   -jar app.jar
-    command: 
-      - /bin/bash
-    workingDir: /opt/
-    ports:
-      - name: http
-        port: 8080
-        service_enable: true
-        service_type: 
-        service_port: 
-    env:
-      configMapKeyRef:
-        - key: network.version
-          ConfigMapName: hooman-config
-        - key: network.deployment
-          ConfigMapName: hooman-config
-      JAVA_OPTS: -Drouting.local-ip=127.0.0.1 -Drouting.version=$(VERSION)
-    envFrom:
-      - ConfigMapName: configmapname
-    healthcheck: 
-      livenessProbe:
-        failureThreshold: 10
-        httpGet:
-          path: /monitor/health
-          port: 8080
-          scheme: HTTP
-        initialDelaySeconds: 10
-        periodSeconds: 30
-        timeoutSeconds: 7
-      readinessProbe:
-        failureThreshold: 3
-        httpGet:
-          path: /monitor/health
-          port: 8080
-          scheme: HTTP
-        initialDelaySeconds: 10
-        periodSeconds: 10
-        timeoutSeconds: 7
-    resources: {}
-      # limits:
-      #   memory: 4Gi
-      #   cpu: "4"
-      # requests:
-      #   cpu: "2"
-      #   memory: 2Gi
-
-
-    securityContext: {}
-    # capabilities:
-    #   drop:
-    #   - ALL
-    # readOnlyRootFilesystem: true
-    # runAsNonRoot: true
-    # runAsUser: 1000  
-volumes: 
-  - name: vol1
-    emptyDir: {}
-  - name: vol2
-    emptyDir: 
-      medium: Memory
-
-
-autoscaling:
+##########################################################
+# Deployment
+##########################################################
+deployment:
   enabled: true
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  # By default deploymentStrategy is set to rollingUpdate with maxSurge of 25% and maxUnavailable of 25%
+  # You can change type to `Recreate` or can uncomment `rollingUpdate` specification and adjust them to your usage.
+  strategy:
+    type: RollingUpdate
+    # rollingUpdate:
+    #   maxSurge: 25%
+    #   maxUnavailable: 25%
 
-nodeSelector: {}
+  # Reload deployment if configMap/secret updates
+  reloadOnChange: true
 
-tolerations: []
+  # Select nodes to deploy which matches the following labels
+  nodeSelector:
+    # cloud.google.com/gke-nodepool: default-pool
 
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: false
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: "MyApp"
+  # Init containers which runs before the app container
+  hostAliases:
+  # - ip: "127.0.0.1"
+  #   hostnames:
+  #   - "foo.local"
+  #   - "bar.local"
+  # - ip: "10.1.2.3"
+  #   hostnames:
+  #   - "foo.remote"
+  #   - "bar.remote"
 
+  # Init containers which runs before the app container
+  initContainers:
+  #      init-contaner:
+  #        image: busybox
+  #        imagePullPolicy: IfNotPresent
+  #        command: ['/bin/sh']
+
+  # Additional labels for Deployment
+  additionalLabels:
+    # key: value
+
+  # Additional label added on pod which is used in Service's Label Selector
+  podLabels:
+    # env: prod
+
+  # Annotations on deployments
+  annotations:
+
+  # Additional Pod Annotations added on pod created by this Deployment
+  additionalPodAnnotations:
+    # key: value
+
+  # Annotations for fluentd Configurations
+  fluentdConfigAnnotations:
+    # fluentd:
+    #   regex: hello
+    #   timeFormat: world
+
+  # Replicas to be created
+  replicas:
+
+  # Secrets used to pull image
+  imagePullSecrets: ""
+
+  # If want to mount Envs from configmap or secret
+  envFrom:
+  #    production-cm:
+  #      type: configmap
+  #      nameSuffix: my-configmap
+  #    logging-config:
+  #      type: configmap
+  #      nameSuffix: your-configmap
+  #    postgres-config:
+  #      type: secret
+  #      nameSuffix: postgres
+
+  # Environment variables to be passed to the app container
+  env:
+  #    ENVIRONMENT:
+  #       value: "dev"
+  #    FREQUENCY:
+  #       valueFrom:
+  #          configMapKeyRef:
+  #             name: config
+  #             key: frequency
+
+  # Volumes to be added to the pod
+  volumes:
+  #     configmap-volume:
+  #       configMap:
+  #         name: '{{ template "application.name" . }}-configmap-nameSuffix'
+  #     secret-volume:
+  #       secret:
+  #         secretName: secret-name
+  #     persistent-volume-name:
+  #       persistentVolumeClaim:
+  #         claimName: claim-name
+
+  # Mount path for Volumes
+  volumeMounts:
+    # volume-name:
+    #    mountPath: path
+    #    subPath: szy
+
+    # volume-name-2:
+    #    mountPath: path-2
+
+  # Taint tolerations for nodes
+  tolerations:
+    # - key: "dedicated"
+    #   operator: "Equal"
+    #   value: "app"
+    #   effect: "NoSchedule"
+
+  # Pod affinity and pod anti-affinity allow you to specify rules about how pods should be placed relative to other pods.
+  affinity:
+  #  nodeAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #      nodeSelectorTerms:
+  #      - matchExpressions:
+  #        - key: disktype
+  #          operator: In
+  #          values:
+  #          - ssd
+
+  # Topology spread constraints
+  topologySpreadConstraints:
+    # - maxSkew: 1
+    #   topologyKey: kubernetes.io/hostname
+    #   whenUnsatisfiable: ScheduleAnyway
+    #   labelSelector:
+    #     matchExpressions:
+    #     - key: disktype
+    #       operator: In
+    #       values:
+    #       - ssd
+    # - maxSkew: 1
+    #   topologyKey: topology.kubernetes.io/zone
+    #   whenUnsatisfiable: ScheduleAnyway
+    #   labelSelector:
+    #     matchExpressions:
+    #     - key: disktype
+    #       operator: In
+    #       values:
+    #       - ssd
+
+  # Number of ReplicaSet versions to retain
+  revisionHistoryLimit: 2
+
+  # Image of the app container
+  image:
+    repository: repository/image-name
+    tag: ""
+    digest: "" # if set to a non empty value, digest takes precedence on the tag
+    pullPolicy: IfNotPresent
+  dnsConfig:
+    # options:
+    # - name: ndots
+    #   value: '1'
+  # Startup, Readiness and Liveness probes
+  startupProbe:
+    enabled: false
+    failureThreshold: 30
+    periodSeconds: 10
+    # Must specify either one of the following field when enabled
+    httpGet: {}
+    exec: {}
+    tcpSocket: {}
+
+  readinessProbe:
+    enabled: false
+    failureThreshold: 3
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+    initialDelaySeconds: 10
+    # Must specify either one of the following field when enabled
+    httpGet: {}
+    exec: {}
+    tcpSocket: {}
+
+  livenessProbe:
+    enabled: false
+    failureThreshold: 3
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+    initialDelaySeconds: 10
+    # Must specify either one of the following field when enabled
+    httpGet: {}
+    exec: {}
+    tcpSocket: {}
+
+  # Resources to be defined for pod
+  resources:
+    limits:
+      memory: 256Mi
+      cpu: 0.5
+    requests:
+      memory: 128Mi
+      cpu: 0.1
+
+  #  Security Context at Container Level
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+
+  openshiftOAuthProxy:
+    enabled: false
+    port: 8080 # Port on which application is running inside container
+    secretName: "openshift-oauth-proxy-tls"
+    image: openshift/oauth-proxy:latest # If you have a custom container for oauth-proxy that can be updated here
+    disableTLSArg: false # If disabled --http-address=:8081 will be used instead of --https-address=:8443 , to be used when an ingress is used for application
+  # Add additional containers besides init and app containers
+  additionalContainers:
+  # - name: sidecar-contaner
+  #   image: busybox
+  #   imagePullPolicy: IfNotPresent
+  #   command: ['/bin/sh']
+
+  # Security Context for the pod
+
+  securityContext:
+    # fsGroup: 2000
+
+  # Command for primary container
+  command: []
+
+  # Args for primary contaner
+  args: []
+
+  # List of ports for the primary container
+  ports:
+  #- containerPort: 8080
+  #  name: http
+  #  protocol: TCP
+  #- containerPort: 8778
+  #  name: jolokia
+  #  protocol: TCP
+  #- containerPort: 8443
+  #  name: https
+  #  protocol: TCP
+
+##########################################################
+# Add Storage volumes to the pods
+##########################################################
+persistence:
+  enabled: false
+  mountPVC: false
+  mountPath: "/"
+  name: ""
+  accessMode: ReadWriteOnce
+  ## If defined, storageClass: <storageClass>
+  ## If set to "-", storageClass: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClass spec is
+  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+  ##   GKE, AWS & OpenStack)
+  ##
+  storageClass: "-"
+  additionalLabels:
+    # key: "value"
+  annotations:
+  #  "helm.sh/resource-policy": keep
+  storageSize: 8Gi
+  volumeMode: ""
+  volumeName: ""
+
+##########################################################
+# Service object for servicing pods
+##########################################################
+service:
+  enabled: true
+  additionalLabels:
+    # expose: "true"
+
+  annotations:
+  #     config.xposer.stakater.com/Domain: stakater.com
+  #     config.xposer.stakater.com/IngressNameTemplate: '{{ "{{.Service}}-{{.Namespace}}" }}'
+  #     config.xposer.stakater.com/IngressURLPath: /
+  #     config.xposer.stakater.com/IngressURLTemplate: '{{ "{{.Service}}.{{.Namespace}}.{{.Domain}}" }}'
+  #     service.alpha.openshift.io/serving-cert-secret-name: |
+  #       '{{ template "application.name" . }}-tls'
+  #     xposer.stakater.com/annotations: |-
+  #       kubernetes.io/ingress.class: external-ingress
+  #       ingress.kubernetes.io/rewrite-target: /
+  #       ingress.kubernetes.io/force-ssl-redirect: true
+
+  ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+      targetPort: 8080
+  type: ClusterIP
+
+  # Set to 'None' will make this service headless
+  clusterIP:
+
+##########################################################
+# Ingress object for exposing services
+##########################################################
 ingress:
   enabled: false
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
+
+  # Name of the ingress class
+  ingressClassName: ""
+
+  # Port of the service that serves pods
+  servicePort: http
+
+  #Set pathType: default is ImplementationSpecific; Options: Exact, Prefix
+  pathType: ImplementationSpecific
+
+  # List of host addresses to be exposed by this Ingress
   hosts:
     - host: chart-example.local
       paths:
-      - path: /
-        backend:
-          serviceName: chart-example.local
-          servicePort: 80
+        - path: /
+      #  pathType: ''
+      #  serviceName: ''
+      #  servicePort: ''
+  # Additional labels for this Ingress
+  additionalLabels:
+
+  # Add annotations to this Ingress
+  annotations:
+    # kubernetes.io/ingress.class: external-ingress
+    # ingress.kubernetes.io/rewrite-target: /
+    # ingress.kubernetes.io/force-ssl-redirect: true
+
+  # TLS details for this Ingress
+  tls:
+    # Secrets must be manually created in the namespace.
+    # - secretName: chart-example-tls
+    #   hosts:
+    #     - chart-example.local
+
+##########################################################
+# Route object for exposing services (OpenShift)
+##########################################################
+route:
+  enabled: false
+
+  # Add annotations to this Route
+  annotations:
+    # kubernetes.io/ingress.class: external-ingress
+    # ingress.kubernetes.io/rewrite-target: /
+    # ingress.kubernetes.io/force-ssl-redirect: true
+
+  # Additional labels for this Route
+  additionalLabels:
+
+  # If no host is added then openshift inserts the default hostname. To Add host explicitly, use host attribute
+  host:
+
+  path:
+  # Port of the service that serves pods
+  port:
+    targetPort: http
+
+  to:
+    weight: 100
+
+  wildcardPolicy: None
+
+  tls:
+    # TLS Termination strategy
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+  alternateBackends:
+    # kind: Service
+    # name: alternate-application
+    # weight: 20
+
+##########################################################
+# SecretProviderClass
+##########################################################
+secretProviderClass:
+  enabled: false
+  name: ""
+  # name: example
+  provider: ""
+  # provider: vault
+  vaultAddress: ""
+  # vaultAddress: http://vault:8200
+  roleName: ""
+  # roleName: example-role
+  objects:
+    #- objectName: MONGO_HOST
+    #  secretPath: testing/data/mongoDb
+    #  secretKey: MONGO_HOST
+  secretObjects:
+    #- data:
+    #  - key: MONGO_HOST
+    #    objectName: host
+    #  secretName: secret-mongo-host
+    #  type: Opaque
+
+##########################################################
+# Expose Application on Forecastle Dashboard
+# https://github.com/stakater/Forecastle
+##########################################################
+forecastle:
+  enabled: false
+
+  # Add additional labels on Forecastle Custom Resource
+  additionalLabels:
+
+  # URL of the icon for the custom app
+  icon: https://raw.githubusercontent.com/stakater/ForecastleIcons/master/stakater-big.png
+
+  # Name of the application to be displayed on the Forecastle Dashboard
+  displayName: "application"
+
+  # Group for the custom app (default: .Release.Namespace)
+  group: ""
+
+  # Add properties to Custom Resource
+  properties:
+
+  # Whether app is network restricted or not
+  networkRestricted: false
+
+##########################################################
+# Role Based Access Control (RBAC)
+##########################################################
+rbac:
+  enabled: true
+
+  # Service Account to use by pods
+  serviceAccount:
+    enabled: false
+    name: ""
+
+    # Additional Labels on service account
+    additionalLabels:
+      # key: value
+
+    # Annotations on service account
+    annotations:
+      # key: value
+
+  # Create Roles (Namespaced)
+  roles:
+  # - name: configmaps
+  #   rules:
+  #   - apiGroups:
+  #     - ""
+  #     resources:
+  #     - configmaps
+  #     verbs:
+  #     - get
+  # - name: secrets
+  #   rules:
+  #   - apiGroups:
+  #     - ""
+  #     resources:
+  #     - secrets
+  #     verbs:
+  #     - get
+
+##########################################################
+# Additional ConfigMaps
+##########################################################
+configMap:
+  enabled: false
+  additionalLabels:
+    # key: value
+  annotations:
+    # key: value
+  files:
+    # nameSuffix of configMap
+#    code-config:
+#       key1: value1
+#       key2: value2
+#    dev-config:
+#       key1: value1
+#       key2: value2
+
+##########################################################
+# SealedSecrets
+##########################################################
+sealedSecret:
+  enabled: false
+  additionalLabels:
+    #key: value
+  annotations:
+    #key: value
+  files:
+#  #nameSuffix of sealedSecret
+#     example:
+#       encryptedData:
+#         name: AgBghrdepGMKmp/rdtJrkBv/CWpJbtmoMsbKQ7QiZZ2kUoLeeTbrDnhmJY03kWKkNW4kN/sQRf6r1vvBEaR4nkHt5f/ayAeaH3NveI3bdb0xv/svvWjyjehwqwr/kNEAVWxRoUij0Y7MyIEAr4hnV2UnrhgvcjPJLNA8bK6spA+kuT328Vpyceyvnm6yArNn1aYlEckaFHrnculHWRpG73iRYxS5GWAY7EdkLXx7OLLWoopHtLcupklYyPfraJzPvBNZ5/PsyjlUBvoQbGV3cZlrdEj1WHj2S1RQ13ddf2WGtMHmY83t9B3LFZAZuA7BBt4rjludbwQm3/tJ5Kas1dDsSIRIIF7MTeum9YfRB8XUz8IxVKQ/JDskeynrWe3VzN/3HFVnv9GGFy+BCVXZKVU/roIRancz+nXkyoOHS722ZpBi53dfLItoS5dG+0EzArMTQzK/KXHz3b1rxp5oWWDNt3WggTiSg2zwy5ZR8VV2ToTDof6UrFmbCZv/kKriyxbVSxIo3KFnvuRiUZ5MwC0TNut4mW3LKyJfHqkUuLa1mYV6tKF58qBnoj/+JaibAIBEudT9hms5U52p7/jKmgHuop7XPEsz4OVwER//Vbv7X6ctoXtyPu6mZyOfOyJHM8Qj/H7/gwMBYhZHQ96DWrVmZOsWSRpZGJni4Xm7rgt2cFj6UtWv6lvl8aOi/HSZVC3TwWZ9mQrk
+#       annotations:
+#         key: value
+#       labels:
+#         key: value
+#       clusterWide: true
+#     example2:
+#       encryptedData:
+#         name: AgBghrdepGMKmp/rdtJrkBv/CWpJbtmoMsbKQ7QiZZ2kUoLeeTbrDnhmJY03kWKkNW4kN/sQRf6r1vvBEaR4nkHt5f/ayAeaH3NveI3bdb0xv/svvWjyjehwqwr/kNEAVWxRoUij0Y7MyIEAr4hnV2UnrhgvcjPJLNA8bK6spA+kuT328Vpyceyvnm6yArNn1aYlEckaFHrnculHWRpG73iRYxS5GWAY7EdkLXx7OLLWoopHtLcupklYyPfraJzPvBNZ5/PsyjlUBvoQbGV3cZlrdEj1WHj2S1RQ13ddf2WGtMHmY83t9B3LFZAZuA7BBt4rjludbwQm3/tJ5Kas1dDsSIRIIF7MTeum9YfRB8XUz8IxVKQ/JDskeynrWe3VzN/3HFVnv9GGFy+BCVXZKVU/roIRancz+nXkyoOHS722ZpBi53dfLItoS5dG+0EzArMTQzK/KXHz3b1rxp5oWWDNt3WggTiSg2zwy5ZR8VV2ToTDof6UrFmbCZv/kKriyxbVSxIo3KFnvuRiUZ5MwC0TNut4mW3LKyJfHqkUuLa1mYV6tKF58qBnoj/+JaibAIBEudT9hms5U52p7/jKmgHuop7XPEsz4OVwER//Vbv7X6ctoXtyPu6mZyOfOyJHM8Qj/H7/gwMBYhZHQ96DWrVmZOsWSRpZGJni4Xm7rgt2cFj6UtWv6lvl8aOi/HSZVC3TwWZ9mQrk
+
+##########################################################
+# Additional Secrets
+##########################################################
+secret:
+  enabled: false
+  additionalLabels:
+    # key: value
+  annotations:
+    # key: value
+  files:
+#  nameSuffix of Secret
+#   credentials:
+#     data:
+#       secretKey1: secretValue1
+#       secretKey2: secretValue2
+#   password:
+#     data:
+#       secretKey1: secretValue1
+#       secretKey2: secretValue2
+
+##########################################################
+# Service Monitor to collect Prometheus metrices
+##########################################################
+serviceMonitor:
+  enabled: false
+
+  # Additional labels
+  additionalLabels:
+    # key: value
+
+  # Additional annotations
+  annotations:
+    # key: value
+
+  # List of the endpoints of service from which prometheus will scrape data
+  endpoints:
+    - interval: 5s
+      path: /actuator/prometheus
+      port: http
+
+##########################################################
+# HPA - Horizontal Pod Autoscaling
+##########################################################
+autoscaling:
+  # enabled is a boolean flag for enabling or disabling autoscaling
+  enabled: false
+  # additionalLabels defines additional labels
+  additionalLabels:
+    # key: value
+  # annotations defines annotations in key value pair
+  annotations:
+    # key: value
+  # minReplicas sets the minimum number of replicas
+  minReplicas: 1
+  # maxReplicas sets the maximum number of replicas
+  maxReplicas: 10
+  # metrics is the list of metrics used for hpa
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 60
+
+##########################################################
+# VPA - Vertical Pod Autoscaling
+##########################################################
+vpa:
+  # enabled is a boolean flag for enabling or disabling vpa
+  enabled: false
+  # additionalLabels defines additional labels
+  additionalLabels:
+    # key: value
+  # annotations defines annotations in key value pair
+  annotations:
+    # key: value
+  # container policies for individual containers.
+  containerPolicies: []
+
+##########################################################
+# EndpointMonitor for IMC
+# https://github.com/stakater/IngressMonitorController
+##########################################################
+endpointMonitor:
+  enabled: false
+
+  # Additional labels
+  additionalLabels:
+    # key: value
+
+  # Additional annotations
+  annotations:
+    # key: value
+
+##########################################################
+# Certficate CRD to generate the certificate
+##########################################################
+certificate:
+  enabled: false
+
+  # Additional labels
+  additionalLabels:
+    # key: value
+
+  # Additional annotations
+  annotations:
+    # key: value
+
+  secretName: tls-cert
+  duration: 8760h0m0s # 1 year
+  renewBefore: 720h0m0s # 30d
+  subject:
+  #  organizations:
+  #    - stakater
+  #  countries:
+  #    - SE
+  #  organizationalUnits:
+  #    - '{{ template "application.namespace" . }}'
+  #  localities:
+  #    - Stockholm
+  #  provinces:
+  #    - Stockholm
+  commonName: admin-app
+  keyAlgorithm: rsa
+  keyEncoding: pkcs1
+  keySize: 2048
+  isCA: false
+  usages:
+  #  - digital signature
+  #  - client auth
+  dnsNames:
+  #  - admin-app
+  ipAddresses:
+  #  - 192.168.0.5
+  uriSANs:
+  #  - spiffe://cluster.local/ns/sandbox/sa/example
+  emailSANs:
+  #  - emailSubjectAltNames
+  privateKey:
+    enabled: false
+    rotationPolicy: Always
+  issuerRef:
+    name: ca-issuer
+    # We can reference ClusterIssuers by changing the kind here.
+    kind: ClusterIssuer
+    group: #cert-manager.io
+  keystores:
+    enabled: false
+    pkcs12:
+      create: true
+      key: test_key
+      name: test-creds
+    jks:
+      create: false
+      key: test_key
+      name: test-creds
+
+##########################################################
+# AlertmanagerConfig object for defining application
+# specific alertmanager configurations
+##########################################################
+alertmanagerConfig:
+  enabled: false
+
+  # AlertmanagerConfig selectionLabels to specify label to be picked up by Alertmanager to add it to base config. Read more about it at [https://docs.openshift.com/container-platform/4.7/rest_api/monitoring_apis/alertmanager-monitoring-coreos-com-v1.html] under .spec.alertmanagerConfigSelector
+  selectionLabels:
+    alertmanagerConfig: "workload"
+
+  # AlertmanagerConfig spec, read details here [https://docs.openshift.com/container-platform/4.7/rest_api/monitoring_apis/alertmanagerconfig-monitoring-coreos-com-v1alpha1.html]
+  spec:
+    route:
+    #   receiver: "null"
+    #   groupBy:
+    #   - job
+    #   routes:
+    #   - receiver: "null"
+    #     groupBy:
+    #     - alertname
+    #     - severity
+    #     continue: true
+    #   groupWait: 30s
+    #   groupInterval: 5m
+    #   repeatInterval: 12h
+    receivers: []
+    # - name: "null"
+    inhibitRules: []
+    # - sourceMatch:
+    #     severity: 'critical'
+    #   targetMatch:
+    #     severity: 'warning'
+    #   equal: ['cluster', 'service']
+
+##########################################################
+# PrometheusRule object for defining application
+# alerting rules
+##########################################################
+prometheusRule:
+  enabled: false
+
+  # PrometheusRule labels
+  additionalLabels:
+    # prometheus: stakater-workload-monitoring
+    # role: alert-rules
+
+  # Groups with alerting rules. Read more here [https://docs.openshift.com/container-platform/4.7/rest_api/monitoring_apis/prometheusrule-monitoring-coreos-com-v1.html]
+
+  groups:
+    []
+    # - name: example-app-uptime
+    #   rules:
+    #     - alert: ExampleAppDown
+    #       annotations:
+    #         message: >-
+    #           The Example App is Down (Test Alert)
+    #       expr: up{namespace="test-app"} == 0
+    #       for: 1m
+    #       labels:
+    #         severity: critical
+##########################################################
+# External Secrets
+##########################################################
+externalSecret:
+  enabled: false
+
+  # Default SecretStore for all externalsecrets defines which SecretStore to use when fetching the secret data
+  secretStore:
+    name: tenant-vault-secret-store
+    #kind: ClusterSecretStore # Defaults to SecretStore if not specified
+
+  # RefreshInterval is the amount of time before the values reading again from the SecretStore provider
+  refreshInterval: "1m"
+  files:
+    # mongodb:
+    # # Data defines the connection between the Kubernetes Secret keys and the Provider data
+    #   data:
+    #      mongo-password:
+    #        remoteRef:
+    #           key: monodb
+    #           property: passowrd
+    #   secretStore:
+    #      name: secret-store-name-2    # specify if value is other than default secretstore
+    #   labels:
+    #      stakater.com/app: mongodb
+    #   #
+    # postgres:
+    ## Used to fetch all properties from the Provider key
+    #   dataFrom:
+    #     key: postgres
+
+##########################################################
+# Network Policy
+##########################################################
+networkPolicy:
+  enabled: false
+  additionalLabels:
+  #   key: value
+  annotations:
+  #   key: value
+  ingress:
+  # - from:
+  #   - ipBlock:
+  #       cidr: 172.17.0.0/16
+  #       except:
+  #       - 172.17.1.0/24
+  #   - namespaceSelector:
+  #       matchLabels:
+  #         project: myproject
+  #   - podSelector:
+  #       matchLabels:
+  #         role: frontend
+  #   ports:
+  #   - protocol: TCP
+  #     port: 6379
+  egress:
+  #   - to:
+  #     - ipBlock:
+  #         cidr: 10.0.0.0/24
+  #     ports:
+  #     - protocol: TCP
+  #       port: 5978
+
+##########################################################
+# Pod disruption budget - PDB
+##########################################################
+pdb:
+  enabled: false
+  minAvailable: 1
+# maxUnavailable: 1
+
+##########################################################
+# grafanaDashboard object for defining application
+# Grafana Dashboard
+##########################################################
+grafanaDashboard:
+  enabled: false
+
+  # GrafanaDashboard additonal labels
+  additionalLabels:
+    # grafanaDashboard: grafana-operator
+
+  # GrafanaDashboard annotations
+  annotations:
+    # key: value
+
+  # GrafanaDashboard contents
+  # this includes pairs of dashboard name and associated json content
+  # Accoroding to GrafanaDashboard behavior, if both url and json are specified then the GrafanaDashboard content will be updated with fetched content from url
+  contents:
+    # dashboard-name-1:
+    #   json: |-
+    #     {
+    #       "data"
+    #     }
+    #   url: http://hostname/path/to/file.json
+    # dashboard-name-2:
+    #   json: |-
+    #     {
+    #       "data"
+    #     }
+    #   url: http://hostname/path/to/file.json
