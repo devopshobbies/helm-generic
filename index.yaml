@@ -1,5 +1,29 @@
 apiVersion: v1
 entries:
+  generic:
+  - apiVersion: v2
+    created: "2023-07-24T14:10:33.975801341Z"
+    description: Generic helm chart for all kind of applications
+    digest: c9f79f73bba122358350ed5c8681d4ba19dc4f80e8183c36dbf8a0dd18a53dd2
+    home: https://github.com/devopshobbies/helm-generic
+    icon: https://github.com/stakater/ForecastleIcons/blob/master/stakater.png
+    keywords:
+    - java
+    - node
+    - dotnet
+    - kubernetes
+    - stakater
+    - application
+    maintainers:
+    - email: ahmad@devopshobbies.com
+      name: Ahmad Ali Bagheri
+    - email: mediraworkm@gmail.com
+      name: Mehdi Rahimi
+    name: generic
+    type: application
+    urls:
+    - https://github.com/devopshobbies/helm-generic/releases/download/generic-0.1.1/generic-0.1.1.tgz
+    version: 0.1.1
   helm-generic:
   - apiVersion: v2
     created: "2023-07-24T13:52:09.476369014Z"
@@ -24,4 +48,4 @@ entries:
     urls:
     - https://github.com/devopshobbies/helm-generic/releases/download/helm-generic-0.1.1/helm-generic-0.1.1.tgz
     version: 0.1.1
-generated: "2023-07-24T13:52:09.476423714Z"
+generated: "2023-07-24T14:10:33.975807541Z"
